@@ -1,0 +1,17 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: goserver-service-loadbalancer
+spec:
+  selector:
+    app: goserver
+  type: LoadBalancer
+  ports:
+    - name: goserver-service
+      port: 80 #porta do serviço
+      protocol: TCP
+      targetPort: 80 #porta do container
+
+
+#LoadBalancer: os clientes enviam solicitações para o endereço IP de um balanceador de carga de rede. 
+      

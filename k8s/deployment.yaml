@@ -1,0 +1,70 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: goserver
+  labels:
+    app: goserver
+spec:
+  selector:
+    matchLabels:
+      app: goserver
+  replicas: 1
+  template:
+    metadata:
+     labels:
+      app: goserver
+    spec:
+      containers:
+        - name: goserver
+          image: athirson010/hello-go:v7
+
+          #1 vCPU -> 1000m(milicors) 
+          resources:
+            requests: #Requisito minimo, reserva recursos do cluster para o POD
+              cpu: 100m
+              memory: 20Mi
+            limits:
+              cpu: 500m
+              memory: 25Mi
+
+          # startupProbe ele garante a inicializacao o liveneess e o readiss so começam a valer depois que o startup estiver completo      
+          startupProbe:
+            httpGet:           
+              path: /healthz
+              port: 80 
+            periodSeconds: 3
+            failureThreshold: 5    
+
+           # o liveness reestarta  o container enquanto
+          livenessProbe: #Existem tres tipos HTTP, conexao TCP, Comand 
+            httpGet:
+              path: /healthz
+              port: 80 #porta do container
+            periodSeconds: 5
+            failureThreshold: 1 #Quantidade de erros antes de reiniciar.
+            timeoutSeconds: 1
+            successThreshold: 1 #Quantidade de sucesso antes de avisar que está OK de fato
+
+          # o readinessProbe ele desvia o trafego para outro pod
+          readinessProbe:
+            httpGet:
+              path: /healthz 
+              port: 80  
+            periodSeconds: 3 
+            failureThreshold: 1 
+                       
+          envFrom:
+           - configMapRef:
+              name: goserver-env
+           - secretRef:
+               name: goserver-secret
+          volumeMounts:
+           - mountPath: "go/minhaFamilia"
+             name: config
+      volumes:
+        - name: config
+          configMap:
+            name: configmap-family
+            items:
+            - key: membros
+              path: "familia.txt"

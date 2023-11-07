@@ -1,0 +1,16 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: goserver-service-node-port
+spec:
+  selector:
+    app: goserver
+  type: NodePort
+  ports:
+    - name: goserver-service
+      port: 80 #porta do serviço
+      protocol: TCP
+      targetPort: 80 #porta do container
+      nodePort: 30001 #30000 - 32767
+      
+#NodePort: os clientes enviam solicitações para o endereço IP de um nó em um ou mais valores nodePort especificados pelo serviço.
