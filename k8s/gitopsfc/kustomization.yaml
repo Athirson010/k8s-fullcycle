@@ -9,4 +9,4 @@ resources:
 images:
 - name: goserver
   newName: athirson010/gitopsfc
-  newTag: 80d5c41fe527a6cad8f6c789d50030af400096a7
+  newTag: 10def45be165979d0a65679e408bee19f803dda7
