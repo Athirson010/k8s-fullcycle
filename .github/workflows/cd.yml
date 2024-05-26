@@ -43,6 +43,6 @@ jobs:
       uses: ad-m/github-push-action@master
       with:
         github_token: ${{ secrets.GITHUB_TOKEN }}
-        repository: athirson010/k8s-fullcycle
+        repository: Athirson010/k8s-fullcycle
 
        
