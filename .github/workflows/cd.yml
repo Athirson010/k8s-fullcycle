@@ -40,7 +40,7 @@ jobs:
         git commit -m "Bump docker version"
 
     - name: push
-      uses: ad-m/github-push-action@main
+      uses: ad-m/github-push-action@master
       with:
         github_token: ${{ secrets.TOKEN_GITHUB }}
         repository: Athirson010/k8s-fullcycle
