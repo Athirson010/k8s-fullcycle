@@ -37,12 +37,12 @@ jobs:
       run: |
         git config --local user.email "action@github.com"
         git config --local user.name "GitHub Action"
-        git commit -m "Bump docker version"
+        git commit -am "Bump docker version"
 
     - name: push
       uses: ad-m/github-push-action@master
       with:
-        github_token: ${{ secrets.TOKEN_GITHUB }}
+        github_token: ${{ secrets.GITHUB_TOKEN }}
         repository: Athirson010/k8s-fullcycle
 
        
