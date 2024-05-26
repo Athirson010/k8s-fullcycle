@@ -1,0 +1,245 @@
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: data-prepper
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  labels:
+    app: data-prepper
+  name: data-prepper-config
+  namespace: data-prepper
+data:
+  data-prepper-config.yaml: |
+    ssl: false
+  pipelines.yaml: |
+    entry-pipeline:
+      delay: "100"
+      source:
+        otel_trace_source:
+          ssl: false
+      sink:
+        - pipeline:
+            name: "raw-pipeline"
+        - pipeline:
+            name: "service-map-pipeline"
+    raw-pipeline:
+      source:
+        pipeline:
+          name: "entry-pipeline"
+      processor:
+        - otel_trace_raw:
+      sink:
+        - opensearch:
+            hosts: [ "http://@OSS_URL:9200" ]
+            username: @OSS_USER
+            password: @OSS_PWD
+            # hosts: [ "${env:OSS_URL}" ]
+            # username: ${env:OSS_USER}
+            # password: ${env:OSS_PWD}
+            insecure: true
+            index_type: trace-analytics-raw
+    service-map-pipeline:
+      delay: "100"
+      source:
+        pipeline:
+          name: "entry-pipeline"
+      processor:
+        - service_map_stateful:
+      sink:
+        - opensearch:
+            hosts: [ "http://@OSS_URL:9200" ]
+            username: @OSS_USER
+            password: @OSS_PWD
+            # hosts: [ "${env:OSS_URL}" ]
+            # username: ${env:OSS_USER}
+            # password: ${env:OSS_PWD}
+            insecure: true
+            index_type: trace-analytics-service-map
+    log-pipeline:
+      source:
+        http:
+          ssl: false
+          authentication:
+            unauthenticated:
+      processor:
+        - grok:
+            match:
+              log: [ "%{COMMONAPACHELOG}" ]
+      sink:
+        - opensearch:
+            hosts: [ "http://@OSS_URL:9200" ]
+            username: @OSS_USER
+            password: @OSS_PWD
+            # hosts: [ "${env:OSS_URL}" ]
+            # username: ${env:OSS_USER}
+            # password: ${env:OSS_PWD}
+            insecure: true
+            index: @CLUSTER_logs
+    # metrics-pipeline:
+    #   source:
+    #     otel_metrics_source:
+    #       ssl: false
+    #   processor:
+    #     - otel_metrics_raw_processor:
+    #   sink:
+    #     - opensearch:
+    #         hosts: [ "http://@OSS_URL:9200" ]
+    #         username: @OSS_USER
+    #         password: @OSS_PWD
+    #         # hosts: [ "${env:OSS_URL}" ]
+    #         # username: ${env:OSS_USER}
+    #         # password: ${env:OSS_PWD}
+    #         insecure: true
+    #         index: @CLUSTER_metrics
+---
+apiVersion: v1
+kind: Service
+metadata:
+  labels:
+    app: data-prepper
+  name: data-prepper
+  namespace: data-prepper
+spec:
+  type: NodePort
+  ports:
+    - name: "21890"
+      port: 21890
+      targetPort: 21890
+    - name: "2021" # Port for http source communication
+      port: 2021
+      targetPort: 2021
+  selector:
+    app: data-prepper
+status:
+  loadBalancer: {}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  labels:
+    app: data-prepper
+  name: data-prepper-metrics
+  namespace: data-prepper
+spec:
+  type: NodePort
+  ports:
+    - name: "4900"
+      port: 4900
+      targetPort: 4900
+  selector:
+    app: data-prepper
+status:
+  loadBalancer: {}
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  labels:
+    app: data-prepper
+  name: data-prepper
+  namespace: data-prepper
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: data-prepper
+  strategy:
+    type: Recreate
+  template:
+    metadata:
+      labels:
+        app: data-prepper
+    spec:
+      containers:
+        - image: opensearchproject/data-prepper:@VERSION_TAG
+          name: data-prepper
+          ports:
+            - containerPort: 21890
+              protocol: TCP
+            - containerPort: 2021 # Port for http source communication
+              protocol: TCP
+          resources:
+            requests:
+              memory: "640Mi"
+              cpu: "250m"
+            limits:
+              memory: "1500Mi"
+              cpu: "1"
+          volumeMounts:
+            - name: prepper-configmap-config
+              mountPath: /usr/share/data-prepper/config/data-prepper-config.yaml
+              subPath: data-prepper-config.yaml
+            - name: prepper-configmap-pipelines
+              mountPath: /usr/share/data-prepper/pipelines/pipelines.yaml
+              subPath: pipelines.yaml
+          envFrom:
+          - configMapRef:
+              name: data-prepper-bkend
+          - secretRef:
+              name: dataprep-secrets
+          # env:
+          #   # Define the environment variable
+          #   - name: OSS_URL
+          #     valueFrom:
+          #       configMapKeyRef:
+          #         name: data-prepper-bkend
+          #         key: OSS_URL
+          #   - name: OSS_USER
+          #     valueFrom:
+          #       secretKeyRef:
+          #         name: dataprep-secrets
+          #         key: oss_user
+          #   - name: OSS_PWD
+          #     valueFrom:
+          #       secretKeyRef:
+          #         name: dataprep-secrets
+          #         key: oss_pwd
+      restartPolicy: Always
+      serviceAccountName: ""
+      volumes:
+        - name: prepper-configmap-config
+          configMap:
+            name: data-prepper-config
+            items:
+              - key: data-prepper-config.yaml
+                path: data-prepper-config.yaml
+
+        - name: prepper-configmap-pipelines
+          configMap:
+            name: data-prepper-config
+            items:
+              - key: pipelines.yaml
+                path: pipelines.yaml
+---
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: data-prepper
+  namespace: data-prepper
+spec:
+  minReplicas: 2
+  maxReplicas: 10
+  behavior:
+    scaleDown:
+      selectPolicy: Disabled
+    scaleUp:
+      selectPolicy: Disabled
+  metrics:
+  - type: Resource
+    resource:
+      name: memory
+      target:
+        type: Utilization
+        averageUtilization: 90
+  - type: Resource
+    resource:
+      name: cpu
+      target:
+        type: Utilization
+        averageUtilization: 80
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: data-prepper

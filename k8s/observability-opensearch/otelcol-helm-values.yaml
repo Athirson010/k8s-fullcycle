@@ -1,0 +1,71 @@
+config:
+  exporters:
+    logging:
+        loglevel: debug
+    otlp/data-prepper:
+      endpoint: data-prepper.data-prepper.svc.cluster.local:21890
+      tls:
+        insecure: true
+        insecure_skip_verify: true
+  extensions:
+    health_check:
+      endpoint: ${env:MY_POD_IP}:13133
+  processors:
+    batch: {}
+    memory_limiter:
+      check_interval: 5s
+      limit_percentage: 80
+      spike_limit_percentage: 25
+  receivers:
+    jaeger: {}
+    otlp:
+      protocols:
+        grpc:
+          endpoint: ${env:MY_POD_IP}:4317
+        http:
+          endpoint: ${env:MY_POD_IP}:4318
+    prometheus: {}
+      # config:
+      #   scrape_configs:
+      #     - job_name: opentelemetry-collector
+      #       scrape_interval: 10s
+      #       static_configs:
+      #         - targets:
+      #             - ${env:MY_POD_IP}:8888
+    zipkin: {}
+  service:
+    extensions:
+    - health_check
+    pipelines:
+      # metrics:
+      #   exporters:
+      #   - otlp/data-prepper
+      #   processors:
+      #   receivers:
+      #   - otlp
+      #   - prometheus
+      traces:
+        exporters:
+        - otlp/data-prepper
+        processors:
+        receivers:
+        - otlp
+    telemetry:
+      metrics:
+        address: ${env:MY_POD_IP}:8888
+
+resources:
+  requests:
+    cpu: 100m
+    memory: 128Mi
+  limits:
+    cpu: 500m
+    memory: 512Mi
+
+autoscaling:
+  enabled: true
+  minReplicas: 2
+  maxReplicas: 10
+  behavior: {}
+  targetCPUUtilizationPercentage: 80
+  targetMemoryUtilizationPercentage: 90
