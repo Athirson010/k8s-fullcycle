@@ -8,4 +8,4 @@ namespace: devns
 images:
 - name: goserver
   newName: athirson010/gitopsfc
-  newTag: newTag
+  newTag: b659d5f3825d38e8c4f7eeb940c2d190615297e2
