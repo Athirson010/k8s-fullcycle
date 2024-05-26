@@ -1,6 +1,6 @@
 # Comandos
 
-# Criação do cluster
+## Criação do cluster
 -- kind create cluster --name=gitopsfc
 -- kubectl cluster-info --context kind-gitopsfc
 
@@ -9,5 +9,5 @@
 - kubectl get service
 
 
-# Kustomize
+## Kustomize
 -- kustomize edit 
