@@ -25,7 +25,7 @@ func Hello(w http.ResponseWriter, r *http.Request) {
 
 	w.Write([]byte("<h1>Fullcycle app go!!</h1>"))
 	w.Write([]byte("<h1>Loadbalancer com configmap</h1>"))
-	w.Write([]byte("<h1>Testado</h1>"))
+	w.Write([]byte("<h1>Testado v2</h1>"))
 	fmt.Fprintf(w, "Salve, eu sou o %s. e eu tenho %s anos de idade.", nome, idade)
 }
 

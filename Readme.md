@@ -11,6 +11,7 @@
 
 ## Kustomize
 -- kustomize edit 
+-- kubectl apply -k .\k8s\gitopsfc
 
 ## Instalando ARGO CD
 
